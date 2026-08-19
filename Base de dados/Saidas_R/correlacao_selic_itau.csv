@@ -1,0 +1,22 @@
+Serie,Bloco,Unidade,Correlacao_Pearson_Selic,N_Trimestres
+Itau_NPL90_Total_pct,NPL 90 dias,%,-1,2
+Itau_NPL90_Brasil_pct,NPL 90 dias,%,-1,2
+Itau_NPL90_PF_Brasil_pct,NPL 90 dias,%,-1,2
+Itau_NPL90_MPME_Brasil_pct,NPL 90 dias,%,1,2
+Itau_NPL90_Grandes_Empresas_Brasil_pct,NPL 90 dias,%,-1,2
+Itau_Carteira_Credito_Imobiliario_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.8900537197651387,10
+Itau_Carteira_PF_Total_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.8531618401283267,10
+Itau_Carteira_Credito_Pessoal_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.8205585957443912,10
+Itau_Carteira_Cartao_Credito_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.8205374328967353,10
+Itau_Carteira_MPME_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.7831115040668378,10
+Itau_Cobertura_Estagio3_America_Latina_pct,Cobertura Estagio 3,%,-0.6040984800576161,7
+Itau_NPL_Creation_America_Latina_R_milhoes,NPL Creation,R$ milhoes,-0.5722588209331826,10
+Itau_NPL_Creation_Atacado_Brasil_R_milhoes,NPL Creation,R$ milhoes,0.5286936706856101,10
+Itau_NPL_Creation_Varejo_Brasil_R_milhoes,NPL Creation,R$ milhoes,0.5040771407846024,10
+Itau_Cobertura_Estagio3_PF_Brasil_pct,Cobertura Estagio 3,%,-0.45315969227897696,7
+Itau_NPL_Creation_Total_R_milhoes,NPL Creation,R$ milhoes,0.3672831266654648,10
+Itau_Carteira_Veiculos_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.34187418883794307,10
+Itau_Carteira_Credito_Consignado_R_milhoes,Carteira por produto/segmento,R$ milhoes,0.31256801904517223,10
+Itau_Cobertura_Estagio3_Total_pct,Cobertura Estagio 3,%,-0.24124970467436685,7
+Itau_Cobertura_Estagio3_Brasil_pct,Cobertura Estagio 3,%,-0.17144306969765188,7
+Itau_Cobertura_Estagio3_PJ_Brasil_pct,Cobertura Estagio 3,%,-0.0691470456768343,7

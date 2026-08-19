@@ -1,0 +1,20 @@
+
+Estatisticas descritivas das series
+=====================================================================================
+Statistic                                     N    Mean   St. Dev.  Min  Median  Max 
+-------------------------------------------------------------------------------------
+Selic_Meta                                   193  10.13     3.67   2.00  10.94  15.00
+Taxa_Media_Juros_Credito                     184  52.12     8.92   36.22 51.88  72.93
+Inadimplencia_PF_Total                       184   4.08     0.68   2.89   4.00  5.62 
+Inadimplencia_Recursos_Livres_Total          184   5.77     0.80   4.09   5.74  7.63 
+Inadimplencia_Cheque_Especial                184  13.72     1.81   9.44  13.66  18.10
+Inadimplencia_Credito_Pessoal_Nao_Consignado 184   7.75     1.22   5.01   7.78  10.60
+Inadimplencia_Composicao_Dividas             184  16.84     2.70   7.20  17.40  21.86
+Inadimplencia_Consignado_Privado             184   5.12     0.96   3.79   5.02  8.63 
+Inadimplencia_Nao_Consignado_Com_Garantia     8    2.36     0.22   2.19   2.28  2.86 
+Inadimplencia_Nao_Consignado_Sem_Garantia     8   13.23     0.84   12.10 13.29  14.34
+Serasa_Inadimplentes_milhoes                 125  66.92     7.09   58.63 63.85  83.93
+Serasa_Populacao_Adulta_pct                  117  42.80     3.33   39.16 41.23  51.04
+PNAD_Taxa_Desocupacao_pct                    172   9.60     2.83   5.10   8.75  14.90
+PNAD_Rendimento_Medio_R                      172 3,350.24  152.60  3,061 3,323  3,795
+-------------------------------------------------------------------------------------

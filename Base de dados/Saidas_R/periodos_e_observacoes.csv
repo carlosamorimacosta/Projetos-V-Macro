@@ -1,0 +1,15 @@
+Serie,Inicio,Fim,N
+Selic_Meta,2010-08-01,2026-08-01,193
+Taxa_Media_Juros_Credito,2011-03-01,2026-06-01,184
+Inadimplencia_PF_Total,2011-03-01,2026-06-01,184
+Inadimplencia_Recursos_Livres_Total,2011-03-01,2026-06-01,184
+Inadimplencia_Cheque_Especial,2011-03-01,2026-06-01,184
+Inadimplencia_Credito_Pessoal_Nao_Consignado,2011-03-01,2026-06-01,184
+Inadimplencia_Composicao_Dividas,2011-03-01,2026-06-01,184
+Inadimplencia_Consignado_Privado,2011-03-01,2026-06-01,184
+Inadimplencia_Nao_Consignado_Com_Garantia,2025-11-01,2026-06-01,8
+Inadimplencia_Nao_Consignado_Sem_Garantia,2025-11-01,2026-06-01,8
+Serasa_Inadimplentes_milhoes,2016-03-01,2026-07-01,125
+Serasa_Populacao_Adulta_pct,2016-11-01,2026-07-01,117
+PNAD_Taxa_Desocupacao_pct,2012-03-01,2026-06-01,172
+PNAD_Rendimento_Medio_R,2012-03-01,2026-06-01,172
