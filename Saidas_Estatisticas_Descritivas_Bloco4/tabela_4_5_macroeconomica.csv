@@ -1,0 +1,5 @@
+Dimensao,Variavel,Unidade,N,Inicio,Fim,Media,Mediana,Desvio_Padrao,Minimo,P25,P75,Maximo
+Macroeconômica,Meta Selic – fim do mês,% a.a.,60,2021-01-01,2025-12-01,11.241666666666667,12.5,3.691770126465984,2,10.5,13.75,15
+Macroeconômica,IPCA – variação mensal,% a.m.,60,2021-01-01,2025-12-01,0.47900000000000004,0.45,0.41151930160470035,-0.6799999999999999,0.24000000000000002,0.715,1.62
+Macroeconômica,Taxa de desocupação – PNAD Contínua,%,60,2021-01-01,2025-12-01,8.785,7.9,2.8091150063043107,5.1,6.75,10.65,14.9
+Macroeconômica,Rendimento médio real – PNAD Contínua,R$,5,2021-12-01,2025-12-01,3078.6,3106,219.30868655846717,2835,2890,3195,3367
