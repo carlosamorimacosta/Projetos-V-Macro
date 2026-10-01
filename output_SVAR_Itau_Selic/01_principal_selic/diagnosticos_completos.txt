@@ -1,0 +1,36 @@
+
+	Edgerton-Shukur F test
+
+data:  Residuals of VAR object var_red
+F statistic = 1.1626, df1 = 125, df2 = 88, p-value = 0.227
+
+$JB
+
+	JB-Test (multivariate)
+
+data:  Residuals of VAR object var_red
+Chi-squared = 37.989, df = 10, p-value = 0.00003812
+
+
+$Skewness
+
+	Skewness only (multivariate)
+
+data:  Residuals of VAR object var_red
+Chi-squared = 16.472, df = 5, p-value = 0.005619
+
+
+$Kurtosis
+
+	Kurtosis only (multivariate)
+
+data:  Residuals of VAR object var_red
+Chi-squared = 21.517, df = 5, p-value = 0.0006467
+
+
+
+	ARCH (multivariate)
+
+data:  Residuals of VAR object var_red
+Chi-squared = 780, df = 1125, p-value = 1
+

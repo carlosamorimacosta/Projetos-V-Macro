@@ -1,0 +1,16 @@
+$Granger
+
+	Granger causality H0: bets do not Granger-cause ibc ipca selic inad
+
+data:  VAR object var_red
+F-Test = 1.3911, df1 = 8, df2 = 230, p-value = 0.2012
+
+
+$Instant
+
+	H0: No instantaneous causality between: bets and ibc ipca selic inad
+
+data:  VAR object var_red
+Chi-squared = 3.3634, df = 4, p-value = 0.499
+
+

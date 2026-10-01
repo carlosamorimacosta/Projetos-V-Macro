@@ -1,0 +1,156 @@
+
+VAR Estimation Results:
+========================= 
+Endogenous variables: ibc, ipca, selic, bets, inad 
+Deterministic variables: const 
+Sample size: 57 
+Log Likelihood: -231.747 
+Roots of the characteristic polynomial:
+0.8255 0.5362 0.5336 0.5336 0.4924 0.4924 0.3926 0.3926 0.2304 0.102
+Call:
+vars::VAR(y = Y, p = p, type = "const")
+
+
+Estimation results for equation ibc: 
+==================================== 
+ibc = ibc.l1 + ipca.l1 + selic.l1 + bets.l1 + inad.l1 + ibc.l2 + ipca.l2 + selic.l2 + bets.l2 + inad.l2 + const 
+
+          Estimate Std. Error t value Pr(>|t|)  
+ibc.l1   -0.138962   0.109161  -1.273   0.2094  
+ipca.l1   0.248429   0.294759   0.843   0.4037  
+selic.l1 -0.087414   0.219941  -0.397   0.6929  
+bets.l1   0.030073   0.012138   2.478   0.0170 *
+inad.l1  -1.678441   1.076140  -1.560   0.1257  
+ibc.l2   -0.298179   0.111150  -2.683   0.0101 *
+ipca.l2  -0.247783   0.288789  -0.858   0.3953  
+selic.l2  0.427075   0.232615   1.836   0.0728 .
+bets.l2  -0.005364   0.012149  -0.441   0.6609  
+inad.l2   0.298046   1.041624   0.286   0.7761  
+const     0.225871   0.166824   1.354   0.1824  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.708 on 46 degrees of freedom
+Multiple R-Squared: 0.3054,	Adjusted R-squared: 0.1544 
+F-statistic: 2.023 on 10 and 46 DF,  p-value: 0.05251 
+
+
+Estimation results for equation ipca: 
+===================================== 
+ipca = ibc.l1 + ipca.l1 + selic.l1 + bets.l1 + inad.l1 + ibc.l2 + ipca.l2 + selic.l2 + bets.l2 + inad.l2 + const 
+
+          Estimate Std. Error t value Pr(>|t|)   
+ibc.l1    0.036880   0.053369   0.691  0.49302   
+ipca.l1   0.430295   0.144108   2.986  0.00452 **
+selic.l1  0.180203   0.107530   1.676  0.10055   
+bets.l1   0.001579   0.005934   0.266  0.79134   
+inad.l1   0.499400   0.526128   0.949  0.34748   
+ibc.l2   -0.108430   0.054342  -1.995  0.05195 . 
+ipca.l2   0.101316   0.141190   0.718  0.47664   
+selic.l2 -0.037391   0.113726  -0.329  0.74382   
+bets.l2  -0.005409   0.005940  -0.911  0.36723   
+inad.l2  -0.346869   0.509253  -0.681  0.49920   
+const     0.201267   0.081561   2.468  0.01738 * 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.3461 on 46 degrees of freedom
+Multiple R-Squared: 0.425,	Adjusted R-squared:   0.3 
+F-statistic:   3.4 on 10 and 46 DF,  p-value: 0.002152 
+
+
+Estimation results for equation selic: 
+====================================== 
+selic = ibc.l1 + ipca.l1 + selic.l1 + bets.l1 + inad.l1 + ibc.l2 + ipca.l2 + selic.l2 + bets.l2 + inad.l2 + const 
+
+          Estimate Std. Error t value Pr(>|t|)   
+ibc.l1   -0.024201   0.068082  -0.355   0.7239   
+ipca.l1   0.153113   0.183835   0.833   0.4092   
+selic.l1  0.066219   0.137173   0.483   0.6316   
+bets.l1   0.001759   0.007570   0.232   0.8172   
+inad.l1   0.553473   0.671168   0.825   0.4138   
+ibc.l2   -0.071581   0.069322  -1.033   0.3072   
+ipca.l2   0.181757   0.180112   1.009   0.3182   
+selic.l2  0.397597   0.145077   2.741   0.0087 **
+bets.l2  -0.001226   0.007577  -0.162   0.8721   
+inad.l2  -0.058333   0.649641  -0.090   0.9288   
+const    -0.053965   0.104045  -0.519   0.6065   
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.4415 on 46 degrees of freedom
+Multiple R-Squared: 0.3993,	Adjusted R-squared: 0.2687 
+F-statistic: 3.058 on 10 and 46 DF,  p-value: 0.004711 
+
+
+Estimation results for equation bets: 
+===================================== 
+bets = ibc.l1 + ipca.l1 + selic.l1 + bets.l1 + inad.l1 + ibc.l2 + ipca.l2 + selic.l2 + bets.l2 + inad.l2 + const 
+
+         Estimate Std. Error t value Pr(>|t|)    
+ibc.l1     1.7996     1.3391   1.344 0.185588    
+ipca.l1    5.9581     3.6159   1.648 0.106221    
+selic.l1  -3.9802     2.6981  -1.475 0.146972    
+bets.l1   -0.5770     0.1489  -3.875 0.000336 ***
+inad.l1   19.4567    13.2013   1.474 0.147335    
+ibc.l2     0.9637     1.3635   0.707 0.483264    
+ipca.l2    2.5364     3.5427   0.716 0.477637    
+selic.l2  -3.9259     2.8536  -1.376 0.175551    
+bets.l2   -0.1429     0.1490  -0.959 0.342658    
+inad.l2   -0.3076    12.7779  -0.024 0.980898    
+const      1.4897     2.0465   0.728 0.470343    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 8.685 on 46 degrees of freedom
+Multiple R-Squared: 0.3243,	Adjusted R-squared: 0.1774 
+F-statistic: 2.208 on 10 and 46 DF,  p-value: 0.03416 
+
+
+Estimation results for equation inad: 
+===================================== 
+inad = ibc.l1 + ipca.l1 + selic.l1 + bets.l1 + inad.l1 + ibc.l2 + ipca.l2 + selic.l2 + bets.l2 + inad.l2 + const 
+
+           Estimate Std. Error t value Pr(>|t|)  
+ibc.l1   -0.0164780  0.0145036  -1.136   0.2618  
+ipca.l1  -0.0503811  0.0391628  -1.286   0.2047  
+selic.l1  0.0501923  0.0292223   1.718   0.0926 .
+bets.l1  -0.0012278  0.0016127  -0.761   0.4503  
+inad.l1   0.0683483  0.1429803   0.478   0.6349  
+ibc.l2    0.0051792  0.0147679   0.351   0.7274  
+ipca.l2   0.0381129  0.0383696   0.993   0.3258  
+selic.l2  0.0731798  0.0309061   2.368   0.0222 *
+bets.l2  -0.0002174  0.0016142  -0.135   0.8934  
+inad.l2   0.0670468  0.1383943   0.484   0.6304  
+const     0.0135851  0.0221649   0.613   0.5430  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Residual standard error: 0.09406 on 46 degrees of freedom
+Multiple R-Squared: 0.3432,	Adjusted R-squared: 0.2004 
+F-statistic: 2.403 on 10 and 46 DF,  p-value: 0.02163 
+
+
+
+Covariance matrix of residuals:
+            ibc      ipca     selic     bets      inad
+ibc    0.501226  0.015080 -0.020588 -0.05024 -0.001243
+ipca   0.015080  0.119806  0.020218  0.12621 -0.006613
+selic -0.020588  0.020218  0.194966 -0.35780 -0.001091
+bets  -0.050243  0.126209 -0.357795 75.42791  0.173122
+inad  -0.001243 -0.006613 -0.001091  0.17312  0.008848
+
+Correlation matrix of residuals:
+            ibc     ipca    selic      bets     inad
+ibc    1.000000  0.06154 -0.06586 -0.008171 -0.01867
+ipca   0.061539  1.00000  0.13228  0.041984 -0.20310
+selic -0.065858  0.13228  1.00000 -0.093302 -0.02627
+bets  -0.008171  0.04198 -0.09330  1.000000  0.21192
+inad  -0.018671 -0.20310 -0.02627  0.211916  1.00000
+
+

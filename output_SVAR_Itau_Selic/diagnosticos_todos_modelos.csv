@@ -1,0 +1,3 @@
+"modelo","n","K","p","lag_max_usado","maior_raiz","estavel","serial_ES_p","normalidade_JB_p","ARCH_p","ordem"
+"01_principal_selic",59,5,2,3,0.825539124508555,TRUE,0.227003125069783,0.0000381248651091237,1,"bets -> ibc -> ipca -> selic -> inad"
+"02_ordem_alternativa_selic",59,5,2,3,0.825539124508554,TRUE,0.227003125069796,0.0000864241887584827,1,"ibc -> ipca -> selic -> bets -> inad"

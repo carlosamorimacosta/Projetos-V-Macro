@@ -1,22 +1,21 @@
 # ============================================================================
 # SFN – INADIMPLÊNCIA PF ATÉ 10 SALÁRIOS MÍNIMOS
-# MODELOS ARDL COM E SEM BETS
+# ARDL COM E SEM BETS – COMPARAÇÃO DE 6 MODALIDADES DE JUROS
 #
-# IMPORTAÇÃO ADAPTADA À ESTRUTURA REAL DOS ARQUIVOS FORNECIDOS
-#
-# IMPORTANTE:
-# - A especificação econométrica dos dois modelos foi preservada.
-# - As regressoras causais continuam entrando a partir de t-1.
-# - A seleção por BIC/AICc/HQIC/AIC, diagnósticos, HAC, VIF, Bounds e ECM
-#   permanecem como no código original.
-# - O período efetivo é definido pela AMOSTRA COMUM disponível nas oito séries.
-# - A renda vem da PNAD Contínua em trimestres móveis atualizados mensalmente.
-# - Cada trimestre móvel é datado pelo ÚLTIMO mês da janela:
-#   jan-fev-mar 2021 -> 2021-03; fev-mar-abr 2021 -> 2021-04.
-# - Isso evita usar informação futura no ARDL.
-# - A variável de Bets vem da base mensal estimada 2021M01–2025M12.
-# - 2021–2023 são meses estimados/desagregados; 2024–2025 usam valores mensais H2.
-# - O modelo econométrico não é alterado: a série continua entrando como `bets`.
+# ADAPTAÇÃO DO CÓDIGO ORIGINAL:
+# - remove o spread livre PF das regressões;
+# - mantém a Selic como variável de política monetária;
+# - importa do CSV BCB seis modalidades de juros:
+#     1) crédito pessoal não consignado;
+#     2) cartão de crédito total;
+#     3) cartão de crédito rotativo;
+#     4) cheque especial;
+#     5) crédito pessoal consignado;
+#     6) aquisição de veículos;
+# - converte as taxas do CSV de % a.m. para equivalente anual % a.a.;
+# - estima cada modalidade SEPARADAMENTE, sempre junto com a Selic;
+# - para cada modalidade estima um modelo sem Bets e outro com Bets;
+# - preserva seleção ARDL, diagnósticos, HAC, VIF, Bounds e ECM.
 # ============================================================================
 
 rm(list = ls())
@@ -27,63 +26,52 @@ set.seed(2026)
 # 0. CONFIGURAÇÕES
 # ============================================================================
 
-# Janela que gostaríamos de utilizar. O código abaixo ajusta automaticamente
-# para a interseção realmente observável das séries, sem preencher NAs.
 data_inicio_desejado <- as.Date("2020-01-01")
 data_fim_desejado    <- as.Date("2026-07-31")
 
 # ============================================================================
-# >>> EDITE OS CAMINHOS DOS ARQUIVOS AQUI <<<
+# >>> CAMINHOS DOS ARQUIVOS <<<
 # ============================================================================
 
 arquivo_inad_10sm <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Inadimplência 10sm/Base_Final_Inadimplencia_PF.xlsx"
 arquivo_inad_geral <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Inadimplencia de crédito - pesssoa física - SGS.csv"
 
-# O arquivo de spread já contém:
-#   Selic_media_mensal_pct_aa
-#   Juros_Livre_PF_pct_aa
-#   Spread_Livre_PF_pp_aa
-# Portanto ele é usado tanto para a Selic mensal quanto para o spread.
-arquivo_spread <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Taxa de juros/Spread_Mensal_Credito_Livre_PF.csv"
-arquivo_selic  <- arquivo_spread
+# O antigo spread NÃO entra mais como regressora.
+# Este arquivo é mantido APENAS como fonte da Selic média mensal já pronta.
+arquivo_selic <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Taxa de juros/Spread_Mensal_Credito_Livre_PF.csv"
+
+# NOVA FONTE DAS TAXAS POR MODALIDADE
+arquivo_juros_modalidades <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Taxa de juros/Taxas médias das op de crédito livre - modalidades - completa.csv"
 
 arquivo_ipca <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/ipca_202606SerieHist.xls"
 arquivo_desemprego <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Desemprego Pnad.csv"
 arquivo_renda <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Renda/rendimento médio pnad.csv"
 arquivo_bets <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Bets/Bets_GGR_Mensal_2021_2025_estimado.xlsx"
 
-# O arquivo abaixo é a fonte bruta usada para construir/validar a taxa média
-# de juros livre PF. Ele NÃO precisa entrar de novo no ARDL porque a série
-# final já está no arquivo de spread.
-arquivo_juros_livre_bruto <- "C:/Users/carlo/Downloads/Projetos V - Macro/Base de dados/Taxa de juros/Taxas médias das op de crédito livre - modalidades - completa.csv"
-
-# Abas efetivamente observadas nos arquivos fornecidos
 aba_inad_10sm <- "Base Mensal"
 aba_ipca <- 1
 aba_bets <- "Base_mensal"
 
-# Por padrão a inadimplência geral é apenas benchmark.
 incluir_inad_geral_no_modelo <- FALSE
 
-# Defasagens máximas
+# p continua até 6. Para q, uso 4 por padrão porque agora serão rodadas
+# 6 especificações de juros × 2 modelos (com/sem Bets).
+# Como as regressoras entram como X_L1, q=4 representa lags originais t-1...t-5.
+# Se quiser reproduzir exatamente o teto antigo, altere max_q para 6.
 max_p <- 6
-max_q <- 6
-
-# Parcimônia
+max_q <- 4
 min_obs_por_coef <- 4
-
-# Diagnóstico mensal
 lag_diagnostico <- 12
 
-# Robustez contemporânea
+# IMPORTANTE:
+# As 6 taxas serão avaliadas em especificações SEPARADAS.
+# Isso evita explosão combinatória na busca ARDL e reduz multicolinearidade.
 rodar_robustez_contemporanea <- TRUE
 
-# Bounds
 usar_bounds_exato <- FALSE
 R_bounds_exato <- 40000
 
-# Saídas
-dir_saida <- "C:/Users/carlo/Downloads/output_SFN_modelos_com_sem_bets"
+dir_saida <- "C:/Users/carlo/Downloads/output_SFN_modelos_modalidades_juros"
 if (!dir.exists(dir_saida)) {
   dir.create(dir_saida, recursive = TRUE)
 }
@@ -139,6 +127,7 @@ suppressPackageStartupMessages({
   library(openxlsx)
   library(readxl)
 })
+
 
 # ============================================================================
 # 2. FUNÇÕES DE IMPORTAÇÃO
@@ -654,6 +643,331 @@ ler_serie_unica <- function(
     out,
     nome_final
   )
+}
+
+
+# ----------------------------------------------------------------------------
+# TAXAS DE JUROS POR MODALIDADE – arquivo BCB/SGS em % a.m.
+#
+# O CSV fornecido contém:
+#   25463 = Cheque especial
+#   25464 = Crédito pessoal não consignado total
+#   25469 = Crédito pessoal consignado total
+#   25471 = Aquisição de veículos
+#   25477 = Cartão de crédito rotativo
+#   25479 = Cartão de crédito total
+#
+# Como a Selic está em % a.a., as taxas mensais são convertidas para
+# equivalente anual por composição:
+#   i_aa = 100 * ((1 + i_am/100)^12 - 1)
+#
+# IMPORTANTE:
+# 25464 é a versão mensal (% a.m.) da modalidade "crédito pessoal não
+# consignado total". O resultado anualizado abaixo é um equivalente anual
+# calculado a partir do CSV; não é renomeado como a série oficial SGS 20742.
+# ----------------------------------------------------------------------------
+
+parse_data_bcb_mmm_aa <- function(x) {
+  
+  s <- iconv(
+    tolower(trimws(as.character(x))),
+    from = "",
+    to = "ASCII//TRANSLIT"
+  )
+  
+  out <- rep(as.Date(NA), length(s))
+  
+  ok <- grepl(
+    "^[a-z]{3}/[0-9]{2}$",
+    s
+  )
+  
+  if (any(ok)) {
+    
+    partes <- strsplit(
+      s[ok],
+      "/",
+      fixed = TRUE
+    )
+    
+    mes_txt <- vapply(
+      partes,
+      `[`,
+      character(1),
+      1
+    )
+    
+    ano_2d <- suppressWarnings(
+      as.integer(
+        vapply(
+          partes,
+          `[`,
+          character(1),
+          2
+        )
+      )
+    )
+    
+    mes_num <- mes_pt_numero(
+      mes_txt
+    )
+    
+    # Os arquivos BCB desta família usam anos 2000+ no período relevante.
+    ano <- 2000 + ano_2d
+    
+    validos <- !is.na(mes_num) &
+      !is.na(ano)
+    
+    tmp <- rep(
+      as.Date(NA),
+      length(mes_num)
+    )
+    
+    tmp[validos] <- as.Date(
+      sprintf(
+        "%04d-%02d-01",
+        ano[validos],
+        mes_num[validos]
+      )
+    )
+    
+    out[ok] <- tmp
+  }
+  
+  # Fallback para qualquer data que já venha em outro formato reconhecível
+  faltou <- is.na(out) & !is.na(s) & s != ""
+  
+  if (any(faltou)) {
+    out[faltou] <- parse_data_mensal(
+      s[faltou]
+    )
+  }
+  
+  out
+}
+
+anualizar_taxa_mensal <- function(x) {
+  100 * (
+    (
+      1 + x / 100
+    )^12 -
+      1
+  )
+}
+
+encontrar_coluna_por_codigo_sgs <- function(
+    df,
+    codigo
+) {
+  
+  padrao <- paste0(
+    "^",
+    codigo,
+    "_"
+  )
+  
+  idx <- grep(
+    padrao,
+    names(df)
+  )
+  
+  if (length(idx) != 1) {
+    stop(
+      "\nNão encontrei exatamente uma coluna para o SGS ",
+      codigo,
+      ".\nColunas encontradas: ",
+      paste(names(df), collapse = ", ")
+    )
+  }
+  
+  names(df)[idx]
+}
+
+ler_juros_modalidades <- function(
+    caminho
+) {
+  
+  raw <- ler_arquivo_generico(
+    caminho,
+    1
+  )
+  
+  col_data <- encontrar_coluna(
+    raw,
+    c(
+      "data",
+      "date",
+      "mes",
+      "mes_ano",
+      "competencia",
+      "periodo"
+    ),
+    "data das taxas de juros"
+  )
+  
+  col_cheque <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25463
+  )
+  
+  col_nao_consignado <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25464
+  )
+  
+  col_consignado <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25469
+  )
+  
+  col_veiculos <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25471
+  )
+  
+  col_rotativo <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25477
+  )
+  
+  col_cartao_total <- encontrar_coluna_por_codigo_sgs(
+    raw,
+    25479
+  )
+  
+  out <- raw %>%
+    transmute(
+      data = parse_data_bcb_mmm_aa(
+        .data[[col_data]]
+      ),
+      
+      cheque_especial_am = parse_numero(
+        .data[[col_cheque]]
+      ),
+      
+      juros_nao_consignado_am = parse_numero(
+        .data[[col_nao_consignado]]
+      ),
+      
+      juros_consignado_am = parse_numero(
+        .data[[col_consignado]]
+      ),
+      
+      juros_veiculos_am = parse_numero(
+        .data[[col_veiculos]]
+      ),
+      
+      juros_cartao_rotativo_am = parse_numero(
+        .data[[col_rotativo]]
+      ),
+      
+      juros_cartao_total_am = parse_numero(
+        .data[[col_cartao_total]]
+      )
+    ) %>%
+    filter(
+      !is.na(data),
+      data >= floor_date(
+        data_inicio_desejado,
+        "month"
+      ),
+      data <= floor_date(
+        data_fim_desejado,
+        "month"
+      )
+    ) %>%
+    mutate(
+      cheque_especial =
+        anualizar_taxa_mensal(
+          cheque_especial_am
+        ),
+      
+      juros_nao_consignado =
+        anualizar_taxa_mensal(
+          juros_nao_consignado_am
+        ),
+      
+      juros_consignado =
+        anualizar_taxa_mensal(
+          juros_consignado_am
+        ),
+      
+      juros_veiculos =
+        anualizar_taxa_mensal(
+          juros_veiculos_am
+        ),
+      
+      juros_cartao_rotativo =
+        anualizar_taxa_mensal(
+          juros_cartao_rotativo_am
+        ),
+      
+      juros_cartao_total =
+        anualizar_taxa_mensal(
+          juros_cartao_total_am
+        )
+    ) %>%
+    select(
+      data,
+      cheque_especial,
+      juros_nao_consignado,
+      juros_consignado,
+      juros_veiculos,
+      juros_cartao_rotativo,
+      juros_cartao_total
+    ) %>%
+    distinct(
+      data,
+      .keep_all = TRUE
+    ) %>%
+    arrange(data)
+  
+  if (nrow(out) == 0) {
+    stop(
+      "\nNenhuma observação válida das taxas por modalidade foi encontrada."
+    )
+  }
+  
+  if (anyDuplicated(out$data)) {
+    stop(
+      "\nHá mais de uma observação por mês na base de modalidades de juros."
+    )
+  }
+  
+  cols_taxas <- setdiff(
+    names(out),
+    "data"
+  )
+  
+  if (
+    any(
+      vapply(
+        out[cols_taxas],
+        function(x) all(is.na(x)),
+        logical(1)
+      )
+    )
+  ) {
+    stop(
+      "\nPelo menos uma das seis taxas foi importada somente com NA."
+    )
+  }
+  
+  message(
+    "Taxas por modalidade importadas corretamente: ",
+    nrow(out),
+    " observações de ",
+    format(min(out$data), "%Y-%m"),
+    " a ",
+    format(max(out$data), "%Y-%m"),
+    "."
+  )
+  
+  message(
+    "As taxas do CSV (% a.m.) foram convertidas para equivalente anual (% a.a.)."
+  )
+  
+  out
 }
 
 # ----------------------------------------------------------------------------
@@ -1515,8 +1829,9 @@ ler_bets_ggr_mensal <- function(
   out
 }
 
+
 # ============================================================================
-# 3. IMPORTAÇÃO DAS OITO VARIÁVEIS
+# 3. IMPORTAÇÃO DAS SÉRIES
 # ============================================================================
 
 message("\n============================================================")
@@ -1550,7 +1865,7 @@ inad_geral <- ler_serie_unica(
   )
 )
 
-# 3) Selic mensal média – extraída do próprio arquivo do spread
+# 3) Selic mensal média – mantida do arquivo que já estava funcionando
 selic_df <- ler_serie_unica(
   arquivo_selic,
   1,
@@ -1563,36 +1878,28 @@ selic_df <- ler_serie_unica(
   )
 )
 
-# 4) Spread livre PF
-spread_df <- ler_serie_unica(
-  arquivo_spread,
-  1,
-  "spread_livre_pf",
-  c(
-    "spread_livre_pf_pp_aa",
-    "spread_livre_pf",
-    "spread_credito_livre_pf",
-    "spread_pf"
-  )
+# 4) NOVO: seis taxas de juros por modalidade
+juros_modalidades_df <- ler_juros_modalidades(
+  arquivo_juros_modalidades
 )
 
-# 5) IPCA – variação percentual no mês
+# 5) IPCA
 ipca_df <- ler_ipca_ibge(
   arquivo_ipca,
   aba_ipca
 )
 
-# 6) Desemprego – PNAD trimestre móvel, datado no último mês
+# 6) Desemprego
 desemprego_df <- ler_desemprego_pnad(
   arquivo_desemprego
 )
 
-# 7) Renda – PNAD Contínua em trimestre móvel, datada no ÚLTIMO mês
+# 7) Renda
 renda_df <- ler_renda_pnad_movel(
   arquivo_renda
 )
 
-# 8) Bets – GGR mensal estimado, já disponível mês a mês no Excel
+# 8) Bets
 bets_df <- ler_bets_ggr_mensal(
   arquivo_bets,
   aba_bets
@@ -1623,9 +1930,9 @@ cobertura_series <- bind_rows(
     fim = max(selic_df$data, na.rm = TRUE)
   ),
   tibble(
-    variavel = "spread_livre_pf",
-    inicio = min(spread_df$data, na.rm = TRUE),
-    fim = max(spread_df$data, na.rm = TRUE)
+    variavel = "juros_modalidades",
+    inicio = min(juros_modalidades_df$data, na.rm = TRUE),
+    fim = max(juros_modalidades_df$data, na.rm = TRUE)
   ),
   tibble(
     variavel = "ipca",
@@ -1649,12 +1956,8 @@ cobertura_series <- bind_rows(
   )
 )
 
-print(
-  cobertura_series
-)
+print(cobertura_series)
 
-# Os dois modelos são estimados NA MESMA AMOSTRA.
-# Isso é importante porque o código compara BIC/AICc e demais métricas.
 data_inicio <- max(
   c(
     floor_date(
@@ -1680,7 +1983,6 @@ if (
   !is.finite(as.numeric(data_fim)) ||
   data_inicio > data_fim
 ) {
-  
   stop(
     "Não existe interseção temporal válida entre todas as séries."
   )
@@ -1691,14 +1993,6 @@ message(
   format(data_inicio, "%Y-%m"),
   " até ",
   format(data_fim, "%Y-%m")
-)
-
-message(
-  "\nObservação metodológica: a renda e o desemprego da PNAD são ",
-  "trimestres móveis atualizados mensalmente e datados pelo último mês ",
-  "da respectiva janela. A série de Bets cobre 2021M01–2025M12; por isso, ",
-  "a amostra comum dos modelos com e sem Bets permanece limitada ao período ",
-  "em que todas as oito séries estão simultaneamente disponíveis."
 )
 
 calendario <- tibble(
@@ -1723,7 +2017,7 @@ base_final <- calendario %>%
     by = "data"
   ) %>%
   left_join(
-    spread_df,
+    juros_modalidades_df,
     by = "data"
   ) %>%
   left_join(
@@ -1742,28 +2036,33 @@ base_final <- calendario %>%
     bets_df,
     by = "data"
   ) %>%
-  arrange(data)
-
-vars_essenciais <- c(
-  "inad_pf_10sm",
-  "inad_pf_geral",
-  "selic",
-  "spread_livre_pf",
-  "ipca",
-  "desemprego",
-  "renda",
-  "bets"
-)
-
-# Gap apenas para diagnóstico
-base_final <- base_final %>%
+  arrange(data) %>%
   mutate(
     gap_inad_10sm_geral =
       inad_pf_10sm -
       inad_pf_geral
   )
 
-# Verificação de NAs APENAS dentro da amostra comum
+vars_taxas <- c(
+  "juros_nao_consignado",
+  "juros_cartao_total",
+  "juros_cartao_rotativo",
+  "cheque_especial",
+  "juros_consignado",
+  "juros_veiculos"
+)
+
+vars_essenciais <- c(
+  "inad_pf_10sm",
+  "inad_pf_geral",
+  "selic",
+  vars_taxas,
+  "ipca",
+  "desemprego",
+  "renda",
+  "bets"
+)
+
 faltantes <- base_final %>%
   filter(
     if_any(
@@ -1772,9 +2071,7 @@ faltantes <- base_final %>%
     )
   )
 
-if (
-  nrow(faltantes) > 0
-) {
+if (nrow(faltantes) > 0) {
   
   message(
     "\nForam encontrados meses com dados ausentes dentro da amostra comum:"
@@ -1795,19 +2092,13 @@ if (
 }
 
 message("\nPrimeiras observações:")
-print(
-  head(base_final)
-)
+print(head(base_final))
 
 message("\nÚltimas observações:")
-print(
-  tail(base_final)
-)
+print(tail(base_final))
 
 message("\nResumo:")
-print(
-  summary(base_final)
-)
+print(summary(base_final))
 
 periodo_tag <- paste0(
   format(data_inicio, "%YM%m"),
@@ -1815,13 +2106,12 @@ periodo_tag <- paste0(
   format(data_fim, "%YM%m")
 )
 
-# Exportação da base final
 readr::write_csv(
   base_final,
   file.path(
     dir_saida,
     paste0(
-      "base_final_SFN_",
+      "base_final_SFN_modalidades_juros_",
       periodo_tag,
       ".csv"
     )
@@ -1833,7 +2123,7 @@ openxlsx::write.xlsx(
   file.path(
     dir_saida,
     paste0(
-      "base_final_SFN_",
+      "base_final_SFN_modalidades_juros_",
       periodo_tag,
       ".xlsx"
     )
@@ -1862,79 +2152,40 @@ descritivas <- map_dfr(
     
     tibble(
       variavel = v,
-      media = mean(
-        x,
-        na.rm = TRUE
-      ),
-      mediana = median(
-        x,
-        na.rm = TRUE
-      ),
-      minimo = min(
-        x,
-        na.rm = TRUE
-      ),
-      maximo = max(
-        x,
-        na.rm = TRUE
-      ),
-      variancia = var(
-        x,
-        na.rm = TRUE
-      ),
-      desvio_padrao = sd(
-        x,
-        na.rm = TRUE
-      )
+      media = mean(x, na.rm = TRUE),
+      mediana = median(x, na.rm = TRUE),
+      minimo = min(x, na.rm = TRUE),
+      maximo = max(x, na.rm = TRUE),
+      variancia = var(x, na.rm = TRUE),
+      desvio_padrao = sd(x, na.rm = TRUE)
     )
   }
 )
 
-print(
-  descritivas
-)
+print(descritivas)
 
 mat_cor <- cor(
   base_final %>%
     select(
-      all_of(
-        vars_numericas
-      )
+      all_of(vars_numericas)
     ),
   use = "complete.obs"
 )
 
 message("\nMatriz de correlação:")
-print(
-  round(
-    mat_cor,
-    4
-  )
+print(round(mat_cor, 4))
+
+cor_taxas <- cor(
+  base_final %>%
+    select(
+      selic,
+      all_of(vars_taxas)
+    ),
+  use = "complete.obs"
 )
 
-cor_inad <- cor(
-  base_final$inad_pf_10sm,
-  base_final$inad_pf_geral
-)
-
-cor_selic_spread <- cor(
-  base_final$selic,
-  base_final$spread_livre_pf
-)
-
-message(
-  sprintf(
-    "\nCorrelação Inad <=10SM × Inad PF geral: %.4f",
-    cor_inad
-  )
-)
-
-message(
-  sprintf(
-    "Correlação Selic × Spread Livre PF: %.4f",
-    cor_selic_spread
-  )
-)
+message("\nCorrelação entre Selic e modalidades de crédito:")
+print(round(cor_taxas, 4))
 
 # ============================================================================
 # 6. GRÁFICOS DAS SÉRIES
@@ -1978,6 +2229,7 @@ for (
     dpi = 150
   )
 }
+
 
 # ============================================================================
 # 7. TESTES DE ESTACIONARIEDADE
@@ -2110,6 +2362,7 @@ if (ha_I2) {
   )
 }
 
+
 # ============================================================================
 # 8. PREPARAÇÃO DAS DEFASAGENS
 # ============================================================================
@@ -2120,34 +2373,31 @@ message("============================================================")
 
 base_ardl <- base_final %>%
   mutate(
-    selic_L1 = lag(
-      selic,
-      1
-    ),
-    spread_livre_pf_L1 = lag(
-      spread_livre_pf,
-      1
-    ),
-    ipca_L1 = lag(
-      ipca,
-      1
-    ),
-    desemprego_L1 = lag(
-      desemprego,
-      1
-    ),
-    renda_L1 = lag(
-      renda,
-      1
-    ),
-    bets_L1 = lag(
-      bets,
-      1
-    ),
-    inad_pf_geral_L1 = lag(
-      inad_pf_geral,
-      1
-    )
+    selic_L1 = lag(selic, 1),
+    
+    juros_nao_consignado_L1 =
+      lag(juros_nao_consignado, 1),
+    
+    juros_cartao_total_L1 =
+      lag(juros_cartao_total, 1),
+    
+    juros_cartao_rotativo_L1 =
+      lag(juros_cartao_rotativo, 1),
+    
+    cheque_especial_L1 =
+      lag(cheque_especial, 1),
+    
+    juros_consignado_L1 =
+      lag(juros_consignado, 1),
+    
+    juros_veiculos_L1 =
+      lag(juros_veiculos, 1),
+    
+    ipca_L1 = lag(ipca, 1),
+    desemprego_L1 = lag(desemprego, 1),
+    renda_L1 = lag(renda, 1),
+    bets_L1 = lag(bets, 1),
+    inad_pf_geral_L1 = lag(inad_pf_geral, 1)
   )
 
 criar_ts <- function(
@@ -2180,41 +2430,19 @@ aicc_modelo <- function(
     modelo
 ) {
   
-  ll <- logLik(
-    modelo
-  )
+  ll <- logLik(modelo)
+  k <- attr(ll, "df")
+  n <- nobs(modelo)
+  aic <- AIC(modelo)
   
-  k <- attr(
-    ll,
-    "df"
-  )
-  
-  n <- nobs(
-    modelo
-  )
-  
-  aic <- AIC(
-    modelo
-  )
-  
-  if (
-    n - k - 1 <= 0
-  ) {
+  if (n - k - 1 <= 0) {
     return(Inf)
   }
   
   as.numeric(
     aic +
-      (
-        2 *
-          k *
-          (k + 1)
-      ) /
-      (
-        n -
-          k -
-          1
-      )
+      (2 * k * (k + 1)) /
+      (n - k - 1)
   )
 }
 
@@ -2222,27 +2450,13 @@ hqic_modelo <- function(
     modelo
 ) {
   
-  ll <- logLik(
-    modelo
-  )
-  
-  k <- attr(
-    ll,
-    "df"
-  )
-  
-  n <- nobs(
-    modelo
-  )
+  ll <- logLik(modelo)
+  k <- attr(ll, "df")
+  n <- nobs(modelo)
   
   as.numeric(
-    -2 *
-      as.numeric(ll) +
-      2 *
-      k *
-      log(
-        log(n)
-      )
+    -2 * as.numeric(ll) +
+      2 * k * log(log(n))
   )
 }
 
@@ -2645,6 +2859,7 @@ ajustar_linha <- function(
   )
 }
 
+
 # ============================================================================
 # 10. SELEÇÃO FINAL COM DIAGNÓSTICO
 # ============================================================================
@@ -2830,145 +3045,6 @@ selecionar_modelo_final <- function(
   )
 }
 
-# ============================================================================
-# 11. DEFINIÇÃO DOS DOIS MODELOS
-# ============================================================================
-
-x_sem_bets <- c(
-  "selic_L1",
-  "spread_livre_pf_L1",
-  "ipca_L1",
-  "desemprego_L1",
-  "renda_L1"
-)
-
-x_com_bets <- c(
-  "selic_L1",
-  "spread_livre_pf_L1",
-  "ipca_L1",
-  "desemprego_L1",
-  "renda_L1",
-  "bets_L1"
-)
-
-if (
-  incluir_inad_geral_no_modelo
-) {
-  
-  x_sem_bets <- c(
-    x_sem_bets,
-    "inad_pf_geral_L1"
-  )
-  
-  x_com_bets <- c(
-    x_com_bets,
-    "inad_pf_geral_L1"
-  )
-}
-
-# ============================================================================
-# 12. MODELO 1 – SEM BETS
-# ============================================================================
-
-message("\n============================================================")
-message("6. ESTIMANDO MODELO 1 – SEM BETS")
-message("============================================================")
-
-ts_sem_bets <- criar_ts(
-  base_ardl,
-  c(
-    "inad_pf_10sm",
-    x_sem_bets
-  )
-)
-
-busca_sem_bets <- buscar_ardl(
-  ts_data = ts_sem_bets,
-  y_var = "inad_pf_10sm",
-  x_vars = x_sem_bets,
-  max_p = max_p,
-  max_q = max_q,
-  causal = TRUE,
-  nome_modelo = "MODELO 1 – SEM BETS"
-)
-
-melhor_sem_AIC <- busca_sem_bets %>%
-  arrange(AIC) %>%
-  slice(1)
-
-melhor_sem_AICc <- busca_sem_bets %>%
-  arrange(AICc) %>%
-  slice(1)
-
-melhor_sem_BIC <- busca_sem_bets %>%
-  arrange(BIC) %>%
-  slice(1)
-
-melhor_sem_HQIC <- busca_sem_bets %>%
-  arrange(HQIC) %>%
-  slice(1)
-
-selecao_sem <- selecionar_modelo_final(
-  busca_sem_bets
-)
-
-modelo_sem_bets <- selecao_sem$modelo
-linha_sem_bets <- selecao_sem$linha
-lm_sem_bets <- to_lm_safe(
-  modelo_sem_bets
-)
-
-# ============================================================================
-# 13. MODELO 2 – COM BETS
-# ============================================================================
-
-message("\n============================================================")
-message("7. ESTIMANDO MODELO 2 – COM BETS")
-message("============================================================")
-
-ts_com_bets <- criar_ts(
-  base_ardl,
-  c(
-    "inad_pf_10sm",
-    x_com_bets
-  )
-)
-
-busca_com_bets <- buscar_ardl(
-  ts_data = ts_com_bets,
-  y_var = "inad_pf_10sm",
-  x_vars = x_com_bets,
-  max_p = max_p,
-  max_q = max_q,
-  causal = TRUE,
-  nome_modelo = "MODELO 2 – COM BETS"
-)
-
-melhor_com_AIC <- busca_com_bets %>%
-  arrange(AIC) %>%
-  slice(1)
-
-melhor_com_AICc <- busca_com_bets %>%
-  arrange(AICc) %>%
-  slice(1)
-
-melhor_com_BIC <- busca_com_bets %>%
-  arrange(BIC) %>%
-  slice(1)
-
-melhor_com_HQIC <- busca_com_bets %>%
-  arrange(HQIC) %>%
-  slice(1)
-
-selecao_com <- selecionar_modelo_final(
-  busca_com_bets
-)
-
-modelo_com_bets <- selecao_com$modelo
-linha_com_bets <- selecao_com$linha
-lm_com_bets <- to_lm_safe(
-  modelo_com_bets
-)
 
 # ============================================================================
 # 14. DIAGNÓSTICOS
@@ -3186,15 +3262,6 @@ diagnosticar_modelo <- function(
   )
 }
 
-diag_sem <- diagnosticar_modelo(
-  modelo_sem_bets,
-  linha_sem_bets$p
-)
-
-diag_com <- diagnosticar_modelo(
-  modelo_com_bets,
-  linha_com_bets$p
-)
 
 # ============================================================================
 # 15. COEFICIENTES HAC
@@ -3245,13 +3312,6 @@ coef_hac <- function(
   )
 }
 
-coef_sem <- coef_hac(
-  lm_sem_bets
-)
-
-coef_com <- coef_hac(
-  lm_com_bets
-)
 
 # ============================================================================
 # 16. VIF / MULTICOLINEARIDADE
@@ -3393,13 +3453,6 @@ vif_manual <- function(
   )
 }
 
-multi_sem <- vif_manual(
-  lm_sem_bets
-)
-
-multi_com <- vif_manual(
-  lm_com_bets
-)
 
 # ============================================================================
 # 17. EFEITO ACUMULADO DOS LAGS
@@ -3495,60 +3548,6 @@ efeito_acumulado <- function(
   )
 }
 
-efeitos_sem <- bind_rows(
-  efeito_acumulado(
-    lm_sem_bets,
-    "selic_L1"
-  ),
-  efeito_acumulado(
-    lm_sem_bets,
-    "spread_livre_pf_L1"
-  ),
-  efeito_acumulado(
-    lm_sem_bets,
-    "ipca_L1"
-  ),
-  efeito_acumulado(
-    lm_sem_bets,
-    "desemprego_L1"
-  ),
-  efeito_acumulado(
-    lm_sem_bets,
-    "renda_L1"
-  )
-)
-
-efeitos_com <- bind_rows(
-  efeito_acumulado(
-    lm_com_bets,
-    "selic_L1"
-  ),
-  efeito_acumulado(
-    lm_com_bets,
-    "spread_livre_pf_L1"
-  ),
-  efeito_acumulado(
-    lm_com_bets,
-    "ipca_L1"
-  ),
-  efeito_acumulado(
-    lm_com_bets,
-    "desemprego_L1"
-  ),
-  efeito_acumulado(
-    lm_com_bets,
-    "renda_L1"
-  ),
-  efeito_acumulado(
-    lm_com_bets,
-    "bets_L1"
-  )
-)
-
-efeito_bets <- efeito_acumulado(
-  lm_com_bets,
-  "bets_L1"
-)
 
 # ============================================================================
 # 18. BOUNDS TEST / ECM
@@ -3698,13 +3697,6 @@ rodar_bounds <- function(
   )
 }
 
-bounds_sem <- rodar_bounds(
-  modelo_sem_bets
-)
-
-bounds_com <- rodar_bounds(
-  modelo_com_bets
-)
 
 # ============================================================================
 # 19. COMPARAÇÃO ENTRE MODELOS
@@ -3789,20 +3781,6 @@ metricas_modelo <- function(
   )
 }
 
-comparacao_modelos <- bind_rows(
-  
-  metricas_modelo(
-    "MODELO 1 – SEM BETS",
-    modelo_sem_bets,
-    diag_sem
-  ),
-  
-  metricas_modelo(
-    "MODELO 2 – COM BETS",
-    modelo_com_bets,
-    diag_com
-  )
-)
 
 # ============================================================================
 # 20. ORDENS / LAGS
@@ -3854,49 +3832,6 @@ mostrar_lags <- function(
   )
 }
 
-nomes_sem <- c(
-  "Selic",
-  "Spread Livre PF",
-  "IPCA",
-  "Desemprego",
-  "Renda"
-)
-
-nomes_com <- c(
-  "Selic",
-  "Spread Livre PF",
-  "IPCA",
-  "Desemprego",
-  "Renda",
-  "Bets"
-)
-
-if (
-  incluir_inad_geral_no_modelo
-) {
-  
-  nomes_sem <- c(
-    nomes_sem,
-    "Inadimplência PF geral"
-  )
-  
-  nomes_com <- c(
-    nomes_com,
-    "Inadimplência PF geral"
-  )
-}
-
-lags_sem <- mostrar_lags(
-  linha_sem_bets,
-  x_sem_bets,
-  nomes_sem
-)
-
-lags_com <- mostrar_lags(
-  linha_com_bets,
-  x_com_bets,
-  nomes_com
-)
 
 # ============================================================================
 # 21. OBSERVADO X AJUSTADO
@@ -3944,15 +3879,6 @@ criar_fit_df <- function(
   )
 }
 
-fit_sem <- criar_fit_df(
-  lm_sem_bets,
-  busca_sem_bets
-)
-
-fit_com <- criar_fit_df(
-  lm_com_bets,
-  busca_com_bets
-)
 
 plot_fit <- function(
     df,
@@ -4003,338 +3929,900 @@ plot_fit <- function(
   )
 }
 
-plot_fit(
-  fit_sem,
-  "Observado × Ajustado – Modelo sem Bets",
-  "observado_ajustado_sem_bets.png"
-)
 
-plot_fit(
-  fit_com,
-  "Observado × Ajustado – Modelo com Bets",
-  "observado_ajustado_com_bets.png"
-)
 
 # ============================================================================
-# 22. ACF / PACF
+# 22. ESPECIFICAÇÕES POR MODALIDADE DE JUROS
 # ============================================================================
 
-png(
-  file.path(
-    dir_saida,
-    "acf_sem_bets.png"
-  ),
-  width = 1000,
-  height = 650
+modalidades_modelo <- tribble(
+  ~taxa_var,                  ~taxa_nome,
+  "juros_nao_consignado",     "Crédito pessoal não consignado",
+  "juros_cartao_total",       "Cartão de crédito total",
+  "juros_cartao_rotativo",    "Cartão de crédito rotativo",
+  "cheque_especial",          "Cheque especial",
+  "juros_consignado",         "Crédito pessoal consignado",
+  "juros_veiculos",           "Aquisição de veículos"
 )
 
-acf(
-  residuals(
-    lm_sem_bets
-  ),
-  main =
-    "ACF – resíduos sem Bets"
-)
+slug_modelo <- function(x) {
+  x <- normalizar_nome(x)
+  gsub("_+", "_", x)
+}
 
-dev.off()
-
-png(
-  file.path(
-    dir_saida,
-    "pacf_sem_bets.png"
-  ),
-  width = 1000,
-  height = 650
-)
-
-pacf(
-  residuals(
-    lm_sem_bets
-  ),
-  main =
-    "PACF – resíduos sem Bets"
-)
-
-dev.off()
-
-png(
-  file.path(
-    dir_saida,
-    "acf_com_bets.png"
-  ),
-  width = 1000,
-  height = 650
-)
-
-acf(
-  residuals(
-    lm_com_bets
-  ),
-  main =
-    "ACF – resíduos com Bets"
-)
-
-dev.off()
-
-png(
-  file.path(
-    dir_saida,
-    "pacf_com_bets.png"
-  ),
-  width = 1000,
-  height = 650
-)
-
-pacf(
-  residuals(
-    lm_com_bets
-  ),
-  main =
-    "PACF – resíduos com Bets"
-)
-
-dev.off()
-
-# ============================================================================
-# 23. ROBUSTEZ CONTEMPORÂNEA
-# ============================================================================
-
-# Observação: renda e desemprego são trimestres móveis sobrepostos.
-# O modelo principal continua mensal; uma agregação trimestral pode ser
-# usada futuramente apenas como teste de robustez, sem alterar esta estimação.
-
-robustez_contemporanea <- NULL
-
-if (
-  rodar_robustez_contemporanea
+salvar_acf_pacf <- function(
+    residuos,
+    prefixo,
+    titulo
 ) {
   
-  message("\n============================================================")
-  message("8. ROBUSTEZ – REGRESSORAS CONTEMPORÂNEAS")
-  message("============================================================")
-  
-  x_sem_cont <- c(
-    "selic",
-    "spread_livre_pf",
-    "ipca",
-    "desemprego",
-    "renda"
+  png(
+    file.path(
+      dir_saida,
+      paste0(prefixo, "_acf.png")
+    ),
+    width = 1000,
+    height = 650
   )
   
-  x_com_cont <- c(
-    "selic",
-    "spread_livre_pf",
-    "ipca",
-    "desemprego",
-    "renda",
-    "bets"
+  acf(
+    residuos,
+    main = paste0(
+      "ACF – ",
+      titulo
+    )
+  )
+  
+  dev.off()
+  
+  png(
+    file.path(
+      dir_saida,
+      paste0(prefixo, "_pacf.png")
+    ),
+    width = 1000,
+    height = 650
+  )
+  
+  pacf(
+    residuos,
+    main = paste0(
+      "PACF – ",
+      titulo
+    )
+  )
+  
+  dev.off()
+}
+
+rodar_par_modalidade <- function(
+    taxa_var,
+    taxa_nome
+) {
+  
+  message("\n\n============================================================")
+  message("MODALIDADE: ", taxa_nome)
+  message("============================================================")
+  
+  taxa_L1 <- paste0(
+    taxa_var,
+    "_L1"
+  )
+  
+  x_sem <- c(
+    "selic_L1",
+    taxa_L1,
+    "ipca_L1",
+    "desemprego_L1",
+    "renda_L1"
+  )
+  
+  x_com <- c(
+    x_sem,
+    "bets_L1"
   )
   
   if (
     incluir_inad_geral_no_modelo
   ) {
     
-    x_sem_cont <- c(
-      x_sem_cont,
-      "inad_pf_geral"
+    x_sem <- c(
+      x_sem,
+      "inad_pf_geral_L1"
     )
     
-    x_com_cont <- c(
-      x_com_cont,
-      "inad_pf_geral"
+    x_com <- c(
+      x_com,
+      "inad_pf_geral_L1"
     )
   }
   
-  ts_sem_cont <- criar_ts(
+  # --------------------------------------------------------------------------
+  # MODELO SEM BETS
+  # --------------------------------------------------------------------------
+  
+  ts_sem <- criar_ts(
     base_ardl,
     c(
       "inad_pf_10sm",
-      x_sem_cont
+      x_sem
     )
   )
   
-  busca_sem_cont <- buscar_ardl(
-    ts_data = ts_sem_cont,
+  busca_sem <- buscar_ardl(
+    ts_data = ts_sem,
     y_var = "inad_pf_10sm",
-    x_vars = x_sem_cont,
+    x_vars = x_sem,
     max_p = max_p,
     max_q = max_q,
-    causal = FALSE,
-    nome_modelo =
-      "ROBUSTEZ SEM BETS – contemporâneo"
+    causal = TRUE,
+    nome_modelo = paste0(
+      taxa_nome,
+      " – SEM BETS"
+    )
   )
   
-  sel_sem_cont <- selecionar_modelo_final(
-    busca_sem_cont
+  melhor_sem_AIC <- busca_sem %>%
+    arrange(AIC) %>%
+    slice(1)
+  
+  melhor_sem_AICc <- busca_sem %>%
+    arrange(AICc) %>%
+    slice(1)
+  
+  melhor_sem_BIC <- busca_sem %>%
+    arrange(BIC) %>%
+    slice(1)
+  
+  melhor_sem_HQIC <- busca_sem %>%
+    arrange(HQIC) %>%
+    slice(1)
+  
+  selecao_sem <- selecionar_modelo_final(
+    busca_sem
   )
   
-  diag_sem_cont <- diagnosticar_modelo(
-    sel_sem_cont$modelo,
-    sel_sem_cont$linha$p
+  modelo_sem <- selecao_sem$modelo
+  linha_sem <- selecao_sem$linha
+  lm_sem <- to_lm_safe(
+    modelo_sem
   )
   
-  ts_com_cont <- criar_ts(
+  # --------------------------------------------------------------------------
+  # MODELO COM BETS
+  # --------------------------------------------------------------------------
+  
+  ts_com <- criar_ts(
     base_ardl,
     c(
       "inad_pf_10sm",
-      x_com_cont
+      x_com
     )
   )
   
-  busca_com_cont <- buscar_ardl(
-    ts_data = ts_com_cont,
+  busca_com <- buscar_ardl(
+    ts_data = ts_com,
     y_var = "inad_pf_10sm",
-    x_vars = x_com_cont,
+    x_vars = x_com,
     max_p = max_p,
     max_q = max_q,
-    causal = FALSE,
-    nome_modelo =
-      "ROBUSTEZ COM BETS – contemporâneo"
+    causal = TRUE,
+    nome_modelo = paste0(
+      taxa_nome,
+      " – COM BETS"
+    )
   )
   
-  sel_com_cont <- selecionar_modelo_final(
-    busca_com_cont
+  melhor_com_AIC <- busca_com %>%
+    arrange(AIC) %>%
+    slice(1)
+  
+  melhor_com_AICc <- busca_com %>%
+    arrange(AICc) %>%
+    slice(1)
+  
+  melhor_com_BIC <- busca_com %>%
+    arrange(BIC) %>%
+    slice(1)
+  
+  melhor_com_HQIC <- busca_com %>%
+    arrange(HQIC) %>%
+    slice(1)
+  
+  selecao_com <- selecionar_modelo_final(
+    busca_com
   )
   
-  diag_com_cont <- diagnosticar_modelo(
-    sel_com_cont$modelo,
-    sel_com_cont$linha$p
+  modelo_com <- selecao_com$modelo
+  linha_com <- selecao_com$linha
+  lm_com <- to_lm_safe(
+    modelo_com
   )
   
-  robustez_contemporanea <- bind_rows(
+  # --------------------------------------------------------------------------
+  # DIAGNÓSTICOS, HAC, VIF
+  # --------------------------------------------------------------------------
+  
+  diag_sem <- diagnosticar_modelo(
+    modelo_sem,
+    linha_sem$p
+  )
+  
+  diag_com <- diagnosticar_modelo(
+    modelo_com,
+    linha_com$p
+  )
+  
+  coef_sem <- coef_hac(
+    lm_sem
+  )
+  
+  coef_com <- coef_hac(
+    lm_com
+  )
+  
+  multi_sem <- vif_manual(
+    lm_sem
+  )
+  
+  multi_com <- vif_manual(
+    lm_com
+  )
+  
+  # --------------------------------------------------------------------------
+  # EFEITOS ACUMULADOS
+  # --------------------------------------------------------------------------
+  
+  vars_efeitos_sem <- c(
+    "selic_L1",
+    taxa_L1,
+    "ipca_L1",
+    "desemprego_L1",
+    "renda_L1"
+  )
+  
+  vars_efeitos_com <- c(
+    vars_efeitos_sem,
+    "bets_L1"
+  )
+  
+  if (
+    incluir_inad_geral_no_modelo
+  ) {
     
+    vars_efeitos_sem <- c(
+      vars_efeitos_sem,
+      "inad_pf_geral_L1"
+    )
+    
+    vars_efeitos_com <- c(
+      vars_efeitos_com,
+      "inad_pf_geral_L1"
+    )
+  }
+  
+  efeitos_sem <- map_dfr(
+    vars_efeitos_sem,
+    ~ efeito_acumulado(
+      lm_sem,
+      .x
+    )
+  )
+  
+  efeitos_com <- map_dfr(
+    vars_efeitos_com,
+    ~ efeito_acumulado(
+      lm_com,
+      .x
+    )
+  )
+  
+  efeito_taxa_sem <- efeito_acumulado(
+    lm_sem,
+    taxa_L1
+  ) %>%
+    mutate(
+      modalidade = taxa_nome,
+      modelo = "SEM BETS"
+    )
+  
+  efeito_taxa_com <- efeito_acumulado(
+    lm_com,
+    taxa_L1
+  ) %>%
+    mutate(
+      modalidade = taxa_nome,
+      modelo = "COM BETS"
+    )
+  
+  efeito_bets <- efeito_acumulado(
+    lm_com,
+    "bets_L1"
+  ) %>%
+    mutate(
+      modalidade = taxa_nome
+    )
+  
+  # --------------------------------------------------------------------------
+  # BOUNDS / ECM
+  # --------------------------------------------------------------------------
+  
+  bounds_sem <- rodar_bounds(
+    modelo_sem
+  )
+  
+  bounds_com <- rodar_bounds(
+    modelo_com
+  )
+  
+  # --------------------------------------------------------------------------
+  # MÉTRICAS
+  # --------------------------------------------------------------------------
+  
+  metricas <- bind_rows(
     metricas_modelo(
-      "SEM BETS – contemporâneo",
-      sel_sem_cont$modelo,
-      diag_sem_cont
+      "SEM BETS",
+      modelo_sem,
+      diag_sem
     ),
-    
     metricas_modelo(
-      "COM BETS – contemporâneo",
-      sel_com_cont$modelo,
-      diag_com_cont
+      "COM BETS",
+      modelo_com,
+      diag_com
+    )
+  ) %>%
+    mutate(
+      modalidade = taxa_nome,
+      taxa_var = taxa_var,
+      .before = 1
+    )
+  
+  # --------------------------------------------------------------------------
+  # LAGS
+  # --------------------------------------------------------------------------
+  
+  nomes_sem <- c(
+    "Selic",
+    taxa_nome,
+    "IPCA",
+    "Desemprego",
+    "Renda"
+  )
+  
+  nomes_com <- c(
+    nomes_sem,
+    "Bets"
+  )
+  
+  if (
+    incluir_inad_geral_no_modelo
+  ) {
+    
+    nomes_sem <- c(
+      nomes_sem,
+      "Inadimplência PF geral"
+    )
+    
+    nomes_com <- c(
+      nomes_com,
+      "Inadimplência PF geral"
+    )
+  }
+  
+  lags_sem <- mostrar_lags(
+    linha_sem,
+    x_sem,
+    nomes_sem
+  ) %>%
+    mutate(
+      modalidade = taxa_nome,
+      modelo = "SEM BETS",
+      .before = 1
+    )
+  
+  lags_com <- mostrar_lags(
+    linha_com,
+    x_com,
+    nomes_com
+  ) %>%
+    mutate(
+      modalidade = taxa_nome,
+      modelo = "COM BETS",
+      .before = 1
+    )
+  
+  # --------------------------------------------------------------------------
+  # OBSERVADO X AJUSTADO + ACF/PACF
+  # --------------------------------------------------------------------------
+  
+  slug <- slug_modelo(
+    taxa_nome
+  )
+  
+  fit_sem <- criar_fit_df(
+    lm_sem,
+    busca_sem
+  )
+  
+  fit_com <- criar_fit_df(
+    lm_com,
+    busca_com
+  )
+  
+  plot_fit(
+    fit_sem,
+    paste0(
+      "Observado × Ajustado – ",
+      taxa_nome,
+      " – sem Bets"
+    ),
+    paste0(
+      "observado_ajustado_",
+      slug,
+      "_sem_bets.png"
     )
   )
+  
+  plot_fit(
+    fit_com,
+    paste0(
+      "Observado × Ajustado – ",
+      taxa_nome,
+      " – com Bets"
+    ),
+    paste0(
+      "observado_ajustado_",
+      slug,
+      "_com_bets.png"
+    )
+  )
+  
+  salvar_acf_pacf(
+    residuals(
+      lm_sem
+    ),
+    paste0(
+      slug,
+      "_sem_bets"
+    ),
+    paste0(
+      taxa_nome,
+      " – sem Bets"
+    )
+  )
+  
+  salvar_acf_pacf(
+    residuals(
+      lm_com
+    ),
+    paste0(
+      slug,
+      "_com_bets"
+    ),
+    paste0(
+      taxa_nome,
+      " – com Bets"
+    )
+  )
+  
+  # --------------------------------------------------------------------------
+  # ROBUSTEZ CONTEMPORÂNEA
+  # --------------------------------------------------------------------------
+  
+  robustez <- NULL
+  
+  if (
+    rodar_robustez_contemporanea
+  ) {
+    
+    x_sem_cont <- c(
+      "selic",
+      taxa_var,
+      "ipca",
+      "desemprego",
+      "renda"
+    )
+    
+    x_com_cont <- c(
+      x_sem_cont,
+      "bets"
+    )
+    
+    if (
+      incluir_inad_geral_no_modelo
+    ) {
+      
+      x_sem_cont <- c(
+        x_sem_cont,
+        "inad_pf_geral"
+      )
+      
+      x_com_cont <- c(
+        x_com_cont,
+        "inad_pf_geral"
+      )
+    }
+    
+    ts_sem_cont <- criar_ts(
+      base_ardl,
+      c(
+        "inad_pf_10sm",
+        x_sem_cont
+      )
+    )
+    
+    busca_sem_cont <- buscar_ardl(
+      ts_data = ts_sem_cont,
+      y_var = "inad_pf_10sm",
+      x_vars = x_sem_cont,
+      max_p = max_p,
+      max_q = max_q,
+      causal = FALSE,
+      nome_modelo = paste0(
+        taxa_nome,
+        " – ROBUSTEZ SEM BETS"
+      )
+    )
+    
+    sel_sem_cont <- selecionar_modelo_final(
+      busca_sem_cont
+    )
+    
+    diag_sem_cont <- diagnosticar_modelo(
+      sel_sem_cont$modelo,
+      sel_sem_cont$linha$p
+    )
+    
+    ts_com_cont <- criar_ts(
+      base_ardl,
+      c(
+        "inad_pf_10sm",
+        x_com_cont
+      )
+    )
+    
+    busca_com_cont <- buscar_ardl(
+      ts_data = ts_com_cont,
+      y_var = "inad_pf_10sm",
+      x_vars = x_com_cont,
+      max_p = max_p,
+      max_q = max_q,
+      causal = FALSE,
+      nome_modelo = paste0(
+        taxa_nome,
+        " – ROBUSTEZ COM BETS"
+      )
+    )
+    
+    sel_com_cont <- selecionar_modelo_final(
+      busca_com_cont
+    )
+    
+    diag_com_cont <- diagnosticar_modelo(
+      sel_com_cont$modelo,
+      sel_com_cont$linha$p
+    )
+    
+    robustez <- bind_rows(
+      metricas_modelo(
+        "SEM BETS – contemporâneo",
+        sel_sem_cont$modelo,
+        diag_sem_cont
+      ),
+      metricas_modelo(
+        "COM BETS – contemporâneo",
+        sel_com_cont$modelo,
+        diag_com_cont
+      )
+    ) %>%
+      mutate(
+        modalidade = taxa_nome,
+        taxa_var = taxa_var,
+        .before = 1
+      )
+  }
+  
+  # --------------------------------------------------------------------------
+  # EXPORTAÇÕES ESPECÍFICAS DA MODALIDADE
+  # --------------------------------------------------------------------------
+  
+  readr::write_csv(
+    head(
+      busca_sem,
+      250
+    ),
+    file.path(
+      dir_saida,
+      paste0(
+        "ranking_",
+        slug,
+        "_sem_bets_top250.csv"
+      )
+    )
+  )
+  
+  readr::write_csv(
+    head(
+      busca_com,
+      250
+    ),
+    file.path(
+      dir_saida,
+      paste0(
+        "ranking_",
+        slug,
+        "_com_bets_top250.csv"
+      )
+    )
+  )
+  
+  list(
+    taxa_var = taxa_var,
+    taxa_nome = taxa_nome,
+    x_sem = x_sem,
+    x_com = x_com,
+    
+    busca_sem = busca_sem,
+    busca_com = busca_com,
+    
+    melhor_sem_AIC = melhor_sem_AIC,
+    melhor_sem_AICc = melhor_sem_AICc,
+    melhor_sem_BIC = melhor_sem_BIC,
+    melhor_sem_HQIC = melhor_sem_HQIC,
+    
+    melhor_com_AIC = melhor_com_AIC,
+    melhor_com_AICc = melhor_com_AICc,
+    melhor_com_BIC = melhor_com_BIC,
+    melhor_com_HQIC = melhor_com_HQIC,
+    
+    selecao_sem = selecao_sem,
+    selecao_com = selecao_com,
+    
+    modelo_sem = modelo_sem,
+    modelo_com = modelo_com,
+    
+    lm_sem = lm_sem,
+    lm_com = lm_com,
+    
+    diag_sem = diag_sem,
+    diag_com = diag_com,
+    
+    coef_sem = coef_sem,
+    coef_com = coef_com,
+    
+    multi_sem = multi_sem,
+    multi_com = multi_com,
+    
+    efeitos_sem = efeitos_sem,
+    efeitos_com = efeitos_com,
+    efeito_taxa_sem = efeito_taxa_sem,
+    efeito_taxa_com = efeito_taxa_com,
+    efeito_bets = efeito_bets,
+    
+    bounds_sem = bounds_sem,
+    bounds_com = bounds_com,
+    
+    metricas = metricas,
+    lags_sem = lags_sem,
+    lags_com = lags_com,
+    
+    fit_sem = fit_sem,
+    fit_com = fit_com,
+    
+    robustez = robustez
+  )
 }
 
 # ============================================================================
-# 24. EXPORTAÇÃO DOS RESULTADOS
+# 23. ESTIMAÇÃO DAS 6 MODALIDADES
 # ============================================================================
 
-bounds_sem_export <- if (
-  !is.null(
-    bounds_sem$bounds
+resultados_modalidades <- vector(
+  "list",
+  nrow(
+    modalidades_modelo
+  )
+)
+
+names(
+  resultados_modalidades
+) <- modalidades_modelo$taxa_var
+
+for (
+  i in seq_len(
+    nrow(
+      modalidades_modelo
+    )
   )
 ) {
   
-  as.data.frame(
-    bounds_sem$bounds$tab
-  )
+  taxa_var_i <- modalidades_modelo$taxa_var[i]
+  taxa_nome_i <- modalidades_modelo$taxa_nome[i]
   
-} else {
-  
-  data.frame(
-    resultado =
-      bounds_sem$conclusao
-  )
+  resultados_modalidades[[taxa_var_i]] <-
+    rodar_par_modalidade(
+      taxa_var = taxa_var_i,
+      taxa_nome = taxa_nome_i
+    )
 }
 
-bounds_com_export <- if (
-  !is.null(
-    bounds_com$bounds
+# ============================================================================
+# 24. CONSOLIDAÇÃO DOS RESULTADOS
+# ============================================================================
+
+comparacao_modelos <- map_dfr(
+  resultados_modalidades,
+  "metricas"
+)
+
+efeitos_taxas <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    "efeito_taxa_sem"
+  ),
+  map_dfr(
+    resultados_modalidades,
+    "efeito_taxa_com"
   )
+)
+
+efeitos_bets <- map_dfr(
+  resultados_modalidades,
+  "efeito_bets"
+)
+
+lags_todos <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    "lags_sem"
+  ),
+  map_dfr(
+    resultados_modalidades,
+    "lags_com"
+  )
+)
+
+coeficientes_todos <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$coef_sem %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "SEM BETS",
+          .before = 1
+        )
+    }
+  ),
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$coef_com %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "COM BETS",
+          .before = 1
+        )
+    }
+  )
+)
+
+diagnosticos_todos <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$diag_sem$tabela %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "SEM BETS",
+          .before = 1
+        )
+    }
+  ),
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$diag_com$tabela %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "COM BETS",
+          .before = 1
+        )
+    }
+  )
+)
+
+vif_todos <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$multi_sem$tabela %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "SEM BETS",
+          condition_number =
+            x$multi_sem$condition_number,
+          .before = 1
+        )
+    }
+  ),
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      x$multi_com$tabela %>%
+        mutate(
+          modalidade = x$taxa_nome,
+          modelo = "COM BETS",
+          condition_number =
+            x$multi_com$condition_number,
+          .before = 1
+        )
+    }
+  )
+)
+
+robustez_todas <- if (
+  rodar_robustez_contemporanea
 ) {
   
-  as.data.frame(
-    bounds_com$bounds$tab
+  bind_rows(
+    map(
+      resultados_modalidades,
+      "robustez"
+    )
   )
   
 } else {
   
-  data.frame(
-    resultado =
-      bounds_com$conclusao
-  )
+  NULL
 }
 
-lr_sem_export <- if (
-  !is.null(
-    bounds_sem$longo_prazo
-  )
-) {
-  
-  as.data.frame(
-    bounds_sem$longo_prazo
-  )
-  
-} else {
-  
-  data.frame(
-    resultado =
-      "Não calculado"
-  )
-}
 
-lr_com_export <- if (
-  !is.null(
-    bounds_com$longo_prazo
+bounds_resumo <- bind_rows(
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      tibble(
+        modalidade = x$taxa_nome,
+        modelo = "SEM BETS",
+        conclusao = x$bounds_sem$conclusao
+      )
+    }
+  ),
+  map_dfr(
+    resultados_modalidades,
+    function(x) {
+      tibble(
+        modalidade = x$taxa_nome,
+        modelo = "COM BETS",
+        conclusao = x$bounds_com$conclusao
+      )
+    }
   )
-) {
-  
-  as.data.frame(
-    bounds_com$longo_prazo
-  )
-  
-} else {
-  
-  data.frame(
-    resultado =
-      "Não calculado"
-  )
-}
+)
 
-ecm_sem_export <- if (
-  !is.null(
-    bounds_sem$recm
-  )
-) {
-  
-  as.data.frame(
-    summary(
-      bounds_sem$recm
-    )$coefficients
-  )
-  
-} else {
-  
-  data.frame(
-    resultado =
-      "Não calculado"
-  )
-}
+# Ranking principal: primeiro BIC, depois diagnóstico e parcimônia
+ranking_modalidades <- comparacao_modelos %>%
+  arrange(
+    modelo,
+    BIC,
+    AICc,
+    HQIC,
+    RMSE
+  ) %>%
+  group_by(
+    modelo
+  ) %>%
+  mutate(
+    ranking_BIC = row_number()
+  ) %>%
+  ungroup()
 
-ecm_com_export <- if (
-  !is.null(
-    bounds_com$recm
-  )
-) {
-  
-  as.data.frame(
-    summary(
-      bounds_com$recm
-    )$coefficients
-  )
-  
-} else {
-  
-  data.frame(
-    resultado =
-      "Não calculado"
-  )
-}
+# ============================================================================
+# 25. EXPORTAÇÃO
+# ============================================================================
 
 abas <- list(
-  
   base_final =
     base_final,
   
@@ -4346,410 +4834,201 @@ abas <- list(
       mat_cor
     ),
   
+  correlacoes_selic_taxas =
+    as.data.frame(
+      cor_taxas
+    ),
+  
   estacionariedade =
     tab_estacionariedade,
   
-  ranking_sem_bets =
-    head(
-      busca_sem_bets,
-      250
-    ),
+  bounds_resumo =
+    bounds_resumo,
   
-  ranking_com_bets =
-    head(
-      busca_com_bets,
-      250
-    ),
+  ranking_modalidades =
+    ranking_modalidades,
   
-  lags_sem_bets =
-    lags_sem,
+  coeficientes_HAC =
+    coeficientes_todos,
   
-  lags_com_bets =
-    lags_com,
+  efeitos_taxas =
+    efeitos_taxas,
   
-  coef_sem_bets_HAC =
-    coef_sem,
+  efeitos_bets =
+    efeitos_bets,
   
-  coef_com_bets_HAC =
-    coef_com,
+  lags =
+    lags_todos,
   
-  efeitos_sem_bets =
-    efeitos_sem,
+  diagnosticos =
+    diagnosticos_todos,
   
-  efeitos_com_bets =
-    efeitos_com,
-  
-  diagnosticos_sem_bets =
-    diag_sem$tabela,
-  
-  diagnosticos_com_bets =
-    diag_com$tabela,
-  
-  VIF_sem_bets =
-    multi_sem$tabela,
-  
-  VIF_com_bets =
-    multi_com$tabela,
-  
-  comparacao_modelos =
-    comparacao_modelos,
-  
-  bounds_sem_bets =
-    bounds_sem_export,
-  
-  bounds_com_bets =
-    bounds_com_export,
-  
-  longo_prazo_sem_bets =
-    lr_sem_export,
-  
-  longo_prazo_com_bets =
-    lr_com_export,
-  
-  ECM_sem_bets =
-    ecm_sem_export,
-  
-  ECM_com_bets =
-    ecm_com_export
+  VIF =
+    vif_todos
 )
 
 if (
   !is.null(
-    robustez_contemporanea
+    robustez_todas
+  )
+) {
+  abas$robustez_contemporanea <-
+    robustez_todas
+}
+
+# Adiciona as 250 melhores especificações de cada busca
+for (
+  taxa_var_i in names(
+    resultados_modalidades
   )
 ) {
   
-  abas$robustez_contemporanea <-
-    robustez_contemporanea
+  obj <- resultados_modalidades[[taxa_var_i]]
+  slug <- slug_modelo(
+    obj$taxa_nome
+  )
+  
+  abas[[
+    paste0(
+      "top_sem_",
+      substr(slug, 1, 20)
+    )
+  ]] <- head(
+    obj$busca_sem,
+    250
+  )
+  
+  abas[[
+    paste0(
+      "top_com_",
+      substr(slug, 1, 20)
+    )
+  ]] <- head(
+    obj$busca_com,
+    250
+  )
 }
 
 openxlsx::write.xlsx(
   abas,
   file = file.path(
     dir_saida,
-    "resultados_SFN_modelos_com_sem_bets.xlsx"
+    "resultados_SFN_modalidades_juros_com_sem_bets.xlsx"
   ),
   overwrite = TRUE
 )
 
 readr::write_csv(
-  busca_sem_bets,
+  ranking_modalidades,
   file.path(
     dir_saida,
-    "ranking_ARDL_sem_bets.csv"
+    "ranking_modalidades_juros.csv"
   )
 )
 
 readr::write_csv(
-  busca_com_bets,
+  efeitos_taxas,
   file.path(
     dir_saida,
-    "ranking_ARDL_com_bets.csv"
+    "efeitos_acumulados_modalidades_juros.csv"
   )
 )
 
 # ============================================================================
-# 25. SÍNTESE FINAL
+# 26. SÍNTESE FINAL
 # ============================================================================
 
 cat("\n\n")
 cat("==================================================================\n")
 cat("SFN – INADIMPLÊNCIA PF ATÉ 10 SM\n")
-cat("Período efetivo: ", format(data_inicio, "%YM%m"), "–", format(data_fim, "%YM%m"), "\n", sep = "")
+cat("COMPARAÇÃO DE MODALIDADES DE JUROS\n")
+cat(
+  "Período efetivo: ",
+  format(data_inicio, "%YM%m"),
+  "–",
+  format(data_fim, "%YM%m"),
+  "\n",
+  sep = ""
+)
 cat("==================================================================\n\n")
 
 cat(
   "Observações disponíveis: ",
   nrow(base_final),
-  "\n\n",
-  sep = ""
-)
-
-cat("--------------------------------------------------\n")
-cat("MODELO 1 – SEM BETS\n")
-cat("--------------------------------------------------\n")
-
-cat(
-  "Melhor AIC: ",
-  fmt_ordem(
-    melhor_sem_AIC,
-    x_sem_bets
-  ),
   "\n",
   sep = ""
 )
 
 cat(
-  "Melhor AICc: ",
-  fmt_ordem(
-    melhor_sem_AICc,
-    x_sem_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Melhor BIC: ",
-  fmt_ordem(
-    melhor_sem_BIC,
-    x_sem_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Melhor HQIC: ",
-  fmt_ordem(
-    melhor_sem_HQIC,
-    x_sem_bets
+  "Taxas comparadas: ",
+  paste(
+    modalidades_modelo$taxa_nome,
+    collapse = "; "
   ),
   "\n\n",
   sep = ""
 )
 
-cat(
-  "MODELO FINAL: ",
-  fmt_ordem(
-    linha_sem_bets,
-    x_sem_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Observações usadas: ",
-  nobs(
-    lm_sem_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "BIC: ",
-  round(
-    linha_sem_bets$BIC,
-    4
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "AICc: ",
-  round(
-    linha_sem_bets$AICc,
-    4
-  ),
-  "\n\n",
-  sep = ""
-)
-
+cat("RANKING DOS MODELOS:\n")
 print(
-  lags_sem
+  ranking_modalidades %>%
+    select(
+      modalidade,
+      modelo,
+      BIC,
+      AICc,
+      HQIC,
+      R2_ajustado,
+      RMSE,
+      BG_p,
+      LjungBox_p,
+      BP_p,
+      RESET_p,
+      JB_p,
+      ranking_BIC
+    ),
+  n = Inf,
+  width = Inf
 )
 
-cat(
-  "\nBounds Test: ",
-  bounds_sem$conclusao,
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Condition Number: ",
-  round(
-    multi_sem$condition_number,
-    3
-  ),
-  "\n\n",
-  sep = ""
-)
-
-cat("--------------------------------------------------\n")
-cat("MODELO 2 – COM BETS\n")
-cat("--------------------------------------------------\n")
-
-cat(
-  "Melhor AIC: ",
-  fmt_ordem(
-    melhor_com_AIC,
-    x_com_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Melhor AICc: ",
-  fmt_ordem(
-    melhor_com_AICc,
-    x_com_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Melhor BIC: ",
-  fmt_ordem(
-    melhor_com_BIC,
-    x_com_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Melhor HQIC: ",
-  fmt_ordem(
-    melhor_com_HQIC,
-    x_com_bets
-  ),
-  "\n\n",
-  sep = ""
-)
-
-cat(
-  "MODELO FINAL: ",
-  fmt_ordem(
-    linha_com_bets,
-    x_com_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Observações usadas: ",
-  nobs(
-    lm_com_bets
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "BIC: ",
-  round(
-    linha_com_bets$BIC,
-    4
-  ),
-  "\n",
-  sep = ""
-)
-
-cat(
-  "AICc: ",
-  round(
-    linha_com_bets$AICc,
-    4
-  ),
-  "\n\n",
-  sep = ""
-)
-
+cat("\nEFEITOS ACUMULADOS DAS TAXAS:\n")
 print(
-  lags_com
+  efeitos_taxas %>%
+    select(
+      modalidade,
+      modelo,
+      efeito_acumulado,
+      erro_padrao,
+      estatistica,
+      p_valor
+    ),
+  n = Inf,
+  width = Inf
 )
 
-cat(
-  "\nBounds Test: ",
-  bounds_com$conclusao,
-  "\n",
-  sep = ""
-)
-
-cat(
-  "Condition Number: ",
-  round(
-    multi_com$condition_number,
-    3
-  ),
-  "\n\n",
-  sep = ""
-)
-
-cat("--------------------------------------------------\n")
-cat("EFEITO DAS BETS\n")
-cat("--------------------------------------------------\n")
-
+cat("\nEFEITOS DAS BETS POR ESPECIFICAÇÃO:\n")
 print(
-  efeito_bets
+  efeitos_bets %>%
+    select(
+      modalidade,
+      efeito_acumulado,
+      erro_padrao,
+      estatistica,
+      p_valor
+    ),
+  n = Inf,
+  width = Inf
 )
-
-cat("\n--------------------------------------------------\n")
-cat("COMPARAÇÃO ENTRE OS DOIS MODELOS\n")
-cat("--------------------------------------------------\n")
-
-print(
-  comparacao_modelos
-)
-
-bic_sem <- comparacao_modelos %>%
-  filter(
-    modelo ==
-      "MODELO 1 – SEM BETS"
-  ) %>%
-  pull(
-    BIC
-  )
-
-bic_com <- comparacao_modelos %>%
-  filter(
-    modelo ==
-      "MODELO 2 – COM BETS"
-  ) %>%
-  pull(
-    BIC
-  )
-
-cat("\n")
-
-if (
-  bic_com <
-  bic_sem
-) {
-  
-  cat(
-    "O modelo COM Bets apresentou BIC menor.\n"
-  )
-  
-} else {
-  
-  cat(
-    "O modelo SEM Bets apresentou BIC menor ou igual.\n"
-  )
-}
-
-if (
-  !is.na(
-    efeito_bets$p_valor
-  ) &&
-  efeito_bets$p_valor <
-  0.05
-) {
-  
-  cat(
-    "O efeito acumulado das Bets é estatisticamente significativo a 5%.\n"
-  )
-  
-} else {
-  
-  cat(
-    "O efeito acumulado das Bets não é estatisticamente significativo a 5%.\n"
-  )
-}
 
 cat(
   "\nIMPORTANTE:\n",
-  "- A inadimplência PF geral foi importada de arquivo próprio.\n",
-  "- Por padrão ela é benchmark, não regressora.\n",
-  "- Para incluí-la nos dois modelos, altere:\n",
-  "  incluir_inad_geral_no_modelo <- TRUE\n",
+  "- O spread livre PF não entra mais em nenhuma regressão.\n",
+  "- A Selic permanece como variável de política monetária.\n",
+  "- Cada modalidade de crédito é estimada separadamente com a Selic.\n",
+  "- Isso permite comparar canais de transmissão e reduz multicolinearidade entre modalidades.\n",
+  "- As taxas do CSV foram convertidas de % a.m. para equivalente anual % a.a.\n",
+  "- Crédito pessoal não consignado no CSV = SGS 25464 (% a.m.).\n",
+  "- O equivalente anual calculado não é rotulado como a série oficial SGS 20742.\n",
   sep = ""
 )
 
@@ -4762,17 +5041,3 @@ cat(
 )
 
 cat("\nFim.\n")
-
-
-
-print(coef_com, n = Inf, width = Inf)
-
-print(multi_com$tabela, n = Inf, width = Inf)
-
-print(diag_com$tabela, n = Inf, width = Inf)
-
-print(coef_sem, n = Inf, width = Inf)
-
-print(multi_sem$tabela, n = Inf, width = Inf)
-
-print(diag_sem$tabela, n = Inf, width = Inf)
