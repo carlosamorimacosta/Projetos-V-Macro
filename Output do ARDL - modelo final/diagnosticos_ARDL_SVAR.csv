@@ -1,0 +1,6 @@
+"teste","H0","estatistica","p_valor","conclusao_5pct"
+"Breusch-Godfrey","Ausência de autocorrelação serial",20.8656502472102,0.034789975954352,"Rejeita H0 a 5%"
+"Ljung-Box","Resíduos sem autocorrelação conjunta",34.134387448066,0.0000846047408621375,"Rejeita H0 a 5%"
+"Breusch-Pagan","Homoscedasticidade",8.81760407915091,0.549496819908547,"Não rejeita H0 a 5%"
+"Jarque-Bera","Normalidade dos resíduos",0.553034781639978,0.758420429463817,"Não rejeita H0 a 5%"
+"Ramsey RESET","Forma funcional adequada",0.24669295779314,0.782454043902213,"Não rejeita H0 a 5%"

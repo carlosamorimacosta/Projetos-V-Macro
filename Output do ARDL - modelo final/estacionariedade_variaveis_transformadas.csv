@@ -1,0 +1,6 @@
+"variavel","n","adf_p","pp_p","kpss_p","estacionaria_maioria","classificacao"
+"bets",59,0.01,0.01,0.1,TRUE,"Compatível com I(0)"
+"ibc",59,0.01,0.01,0.1,TRUE,"Compatível com I(0)"
+"ipca",59,0.0310725463531749,0.01,0.0467043594721189,TRUE,"Compatível com I(0)"
+"selic",59,0.743814998065049,0.01,0.0506123062663832,TRUE,"Compatível com I(0)"
+"inad",59,0.500505655544694,0.01,0.1,TRUE,"Compatível com I(0)"

@@ -1,0 +1,29 @@
+
+Call:
+lm(formula = inad ~ inad_L1 + inad_L2 + bets_L1 + bets_L2 + ibc_L1 + 
+    ibc_L2 + ipca_L1 + ipca_L2 + selic_L1 + selic_L2, data = base_reg)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.205512 -0.063985  0.001833  0.056514  0.228015 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)  
+(Intercept)  0.0135851  0.0221649   0.613   0.5430  
+inad_L1      0.0683483  0.1429803   0.478   0.6349  
+inad_L2      0.0670468  0.1383943   0.484   0.6304  
+bets_L1     -0.0012278  0.0016127  -0.761   0.4503  
+bets_L2     -0.0002174  0.0016142  -0.135   0.8934  
+ibc_L1      -0.0164780  0.0145036  -1.136   0.2618  
+ibc_L2       0.0051792  0.0147679   0.351   0.7274  
+ipca_L1     -0.0503811  0.0391628  -1.286   0.2047  
+ipca_L2      0.0381129  0.0383696   0.993   0.3258  
+selic_L1     0.0501923  0.0292223   1.718   0.0926 .
+selic_L2     0.0731798  0.0309061   2.368   0.0222 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.09406 on 46 degrees of freedom
+Multiple R-squared:  0.3432,	Adjusted R-squared:  0.2004 
+F-statistic: 2.403 on 10 and 46 DF,  p-value: 0.02163
+

@@ -1,0 +1,2 @@
+"modelo","n","AIC","BIC","R2","R2_ajustado","RMSE_in_sample","MAE_in_sample"
+"ARDL-equação da inadimplência / mesma especificação SVAR",57,-95.9331087255044,-71.4164935114897,0.343166695493086,0.200376846687235,0.0845017236513443,0.0686511840666794
