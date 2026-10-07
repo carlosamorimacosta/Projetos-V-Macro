@@ -68,13 +68,7 @@ Os modelos ARDL permitem incorporar simultaneamente:
 A especificação geral é:
 
 $$
-Y_t =
-\alpha +
-\sum_{i=1}^{p}\phi_iY_{t-i}
-+
-\sum_{j=0}^{q}\beta_jX_{t-j}
-+
-\varepsilon_t
+Y_t = \alpha + \sum_{i=1}^{p}\phi_iY_{t-i} + \sum_{j=0}^{q}\beta_jX_{t-j} + \varepsilon_t
 $$
 
 São consideradas três aplicações principais.
@@ -92,19 +86,7 @@ $$
 ### Com bets
 
 $$
-Inad_t^{10SM}
-=
-\alpha
-+
-\sum_{i=1}^{p}\phi_i Inad_{t-i}^{10SM}
-+
-\sum_m\sum_{j=0}^{q_m}\beta_{mj}J_{t-j}^{m}
-+
-\sum_k\sum_{r=0}^{s_k}\gamma_{kr}X_{k,t-r}
-+
-\sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell}
-+
-\varepsilon_t
+Inad_t^{10SM} = \alpha + \sum_{i=1}^{p}\phi_i Inad_{t-i}^{10SM} + \sum_m\sum_{j=0}^{q_m}\beta_{mj}J_{t-j}^{m} + \sum_k\sum_{r=0}^{s_k}\gamma_{kr}X_{k,t-r} +  sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell} + \varepsilon_t
 $$
 
 em que:
@@ -123,17 +105,7 @@ A comparação entre os modelos com e sem bets permite verificar se a variável 
 ## Modelo 2 — Inadimplência do Itaú condicionada ao SFN
 
 $$
-NPL_t^{Itaú}
-=
-\alpha
-+
-\sum_{i=1}^{p}\phi_iNPL_{t-i}^{Itaú}
-+
-\sum_{j=0}^{q}\theta_jNPL_{t-j}^{SFN}
-+
-\sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell}
-+
-\varepsilon_t
+NPL_t^{Itaú} = \alpha + \sum_{i=1}^{p}\phi_iNPL_{t-i}^{Itaú} + \sum_{j=0}^{q}\theta_jNPL_{t-j}^{SFN} + \sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell} + \varepsilon_t
 $$
 
 O modelo avalia se a inadimplência do Itaú acompanha a dinâmica agregada do SFN e se a variável de bets acrescenta informação ao comportamento da carteira do banco.
@@ -153,17 +125,7 @@ $$
 e estima-se:
 
 $$
-Gap_t
-=
-\alpha
-+
-\sum_{i=1}^{p}\rho_i Gap_{t-i}
-+
-\sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell}
-+
-\sum_k \gamma_k'X_{t-k}
-+
-\varepsilon_t
+Gap_t = \alpha + \sum_{i=1}^{p}\rho_i Gap_{t-i} + \sum_{\ell=0}^{q_B}\delta_\ell Bets_{t-\ell} + \sum_k \gamma_k'X_{t-k} + \varepsilon_t
 $$
 
 O objetivo é investigar se fatores macroeconômicos, financeiros e relacionados às bets estão associados a uma **deterioração relativa da carteira do Itaú em relação ao SFN**.
@@ -177,16 +139,7 @@ Como as séries de inadimplência do Itaú e do SFN não são perfeitamente comp
 Quando as propriedades das séries permitirem, os modelos também podem ser representados na forma de **Error Correction Model (ECM)**:
 
 $$
-\Delta Y_t =
-\alpha
-+
-\sum_i\gamma_i\Delta Y_{t-i}
-+
-\sum_j\delta_j\Delta X_{t-j}
-+
-\lambda ECT_{t-1}
-+
-\varepsilon_t
+\Delta Y_t = \alpha + \sum_i\gamma_i\Delta Y_{t-i} + \sum_j\delta_j\Delta X_{t-j} + \lambda ECT_{t-1} + \varepsilon_t
 $$
 
 O **Bounds Test** é utilizado para verificar a existência de uma relação de equilíbrio de longo prazo.
