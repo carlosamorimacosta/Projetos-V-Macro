@@ -86,17 +86,7 @@ São consideradas três aplicações principais.
 ### Sem bets
 
 $$
-Inad_t^{10SM}
-=
-\alpha
-+
-\sum_{i=1}^{p}\phi_i Inad_{t-i}^{10SM}
-+
-\sum_m\sum_{j=0}^{q_m}\beta_{mj}J_{t-j}^{m}
-+
-\sum_k\sum_{r=0}^{s_k}\gamma_{kr}X_{k,t-r}
-+
-\varepsilon_t
+Inad_t^{10SM} = \alpha + \sum_{i=1}^{p}\phi_i Inad_{t-i}^{10SM} + \sum_m\sum_{j=0}^{q_m}\beta_{mj}J_{t-j}^{m} + \sum_k\sum_{r=0}^{s_k}\gamma_{kr}X_{k,t-r} + \varepsilon_t
 $$
 
 ### Com bets
