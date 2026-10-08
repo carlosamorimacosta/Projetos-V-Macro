@@ -1,0 +1,18 @@
+PROJETO V - Extensoes do ARDL/SVAR(2) implementadas em Rcpp/C++
+Janela: 2021-04-01 a 2025-12-01 ; N regressao: 57
+Modelo original, transformacoes e defasagens preservados (ARDL curto prazo).
+BOOTSTRAP: residuos centrados em blocos moveis CIRCULARES, geracao recursiva de Delta Inad, regressoras fixas.
+TESTE DE BETS: Wald HAC conjunto das duas defasagens; distrib. bootstrap sob H0 obtida em modelo restrito.
+LIMITACAO BOOT: exogeneidade condicional dos X e estabilidade da dinamica sao pressupostos; nao prova causalidade.
+BANDAS: percentis bootstrap simples, nao sao intervalos simultaneos; podem ser instaveis com AR perto de 1.
+MULTIPLICADORES: choque TRANSITORIO +1 p.p. em crescimento real de Bets, mantendo outros X fixos.
+Resposta de NIVEL = soma cumulativa de Delta Inad; nao e ECM, bounds test ou efeito causal identificado.
+MONTE CARLO: o nivel real de Bets e INDICE reconstruido de crescimento (escala inicial arbitraria).
+Cada ano preserva a soma do indice real ORIGINAL; NAO preserva a soma oficial de GGR nominal.
+Sigmas (5%, 10%, 20%) representam cenarios hipoteticos, nao incerteza estimada empiricamente.
+RIDGE/ELASTIC NET: penalizacao inclui 10 slopes, nao intercepto; padronizacao so com treino.
+Lambdas selecionados com origens moveis antes do ultimo bloco de 12 meses; ultimo bloco usado apenas para teste.
+P-valores da regressao OLS nao sao validos automaticamente para coeficientes penalizados.
+O conteudo nao identifica efeitos causais: Bets GGR nacional e proxy imperfeita da exposicao ate 10 SM.
+Fracao de draws AR-estavel no bootstrap principal: 1
+Wald HAC observ.: 1.3269 ; p bootstrap sob H0: 0.6197
